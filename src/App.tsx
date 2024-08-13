@@ -5,13 +5,32 @@ import Konva from 'konva';
 type Tool = 'select' | 'rect' | 'circle' | 'line';
 type Shape = 'rect' | 'circle';
 
+interface ShapeData {
+  id: string;
+  type: Shape;
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  radius?: number;
+}
+
+interface LineData {
+  id: string;
+  points: number[];
+  startShapeId: string | null;
+  endShapeId: string | null;
+}
+
 const App: React.FC = () => {
   const stageRef = useRef<Konva.Stage>(null);
   const layerRef = useRef<Konva.Layer>(null);
   const [tool, setTool] = useState<Tool>('select');
   const [shape, setShape] = useState<Shape>('rect');
   const [isDrawing, setIsDrawing] = useState(false);
-  const [linePoints, setLinePoints] = useState<number[]>([]);
+  const [shapes, setShapes] = useState<ShapeData[]>([]);
+  const [lines, setLines] = useState<LineData[]>([]);
+  const [activeLine, setActiveLine] = useState<number[] | null>(null);
 
   useEffect(() => {
     const updateSize = () => {
@@ -40,63 +59,112 @@ const App: React.FC = () => {
     setIsDrawing(true);
 
     if (tool === 'line') {
-      setLinePoints([pos.x, pos.y, pos.x, pos.y]);
+      setActiveLine([pos.x, pos.y, pos.x, pos.y]);
     } else {
-      const shapeProps = {
+      const newShape: ShapeData = {
+        id: Math.random().toString(),
+        type: shape,
         x: pos.x,
         y: pos.y,
         width: 50,
         height: 50,
-        fill: Konva.Util.getRandomColor(),
-        draggable: true,
+        radius: 25,
       };
 
-      const newShape = tool === 'rect' 
-        ? new Konva.Rect(shapeProps)
-        : new Konva.Circle({ ...shapeProps, radius: 25 });
-
-      layerRef.current?.add(newShape);
+      setShapes([...shapes, newShape]);
     }
   };
 
   const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (!isDrawing) return;
+    if (!isDrawing || tool !== 'line' || !activeLine) return;
     if (!stageRef.current) return;
 
     const pos = stageRef.current.getPointerPosition();
     if (!pos) return;
 
-    if (tool === 'line') {
-      setLinePoints([linePoints[0], linePoints[1], pos.x, pos.y]);
-    }
+    setActiveLine([activeLine[0], activeLine[1], pos.x, pos.y]);
   };
 
   const handleMouseUp = () => {
+    if (!isDrawing) return;
     setIsDrawing(false);
 
-    if (tool === 'line' && layerRef.current) {
-      const newLine = new Konva.Line({
-        points: linePoints,
-        stroke: 'black',
-        strokeWidth: 2,
-      });
-      layerRef.current.add(newLine);
-      setLinePoints([]);
+    if (tool === 'line' && activeLine) {
+      const newLine: LineData = {
+        id: Math.random().toString(),
+        points: activeLine,
+        startShapeId: null,
+        endShapeId: null,
+      };
+
+      setLines([...lines, newLine]);
+      setActiveLine(null);
     }
   };
 
+  const isPointInShape = (x: number, y: number, shape: ShapeData): boolean => {
+    if (shape.type === 'rect') {
+      return (
+        x >= shape.x &&
+        x <= shape.x + (shape.width || 0) &&
+        y >= shape.y &&
+        y <= shape.y + (shape.height || 0)
+      );
+    } else if (shape.type === 'circle') {
+      const dx = x - (shape.x + (shape.radius || 0));
+      const dy = y - (shape.y + (shape.radius || 0));
+      return dx * dx + dy * dy <= (shape.radius || 0) * (shape.radius || 0);
+    }
+    return false;
+  };
+
+  const attachLineToShapes = () => {
+    if (!activeLine) return;
+
+    const [x1, y1, x2, y2] = activeLine;
+    let startShape: ShapeData | null = null;
+    let endShape: ShapeData | null = null;
+
+    for (const shape of shapes) {
+      if (isPointInShape(x1, y1, shape)) {
+        startShape = shape;
+      }
+      if (isPointInShape(x2, y2, shape)) {
+        endShape = shape;
+      }
+    }
+
+    const newLine: LineData = {
+      id: Math.random().toString(),
+      points: activeLine,
+      startShapeId: startShape?.id || null,
+      endShapeId: endShape?.id || null,
+    };
+
+    setLines([...lines, newLine]);
+    setActiveLine(null);
+  };
+
+  useEffect(() => {
+    if (!isDrawing && activeLine) {
+      attachLineToShapes();
+    }
+  }, [isDrawing, activeLine]);
+
   return (
     <>
-      <div className='toolbar' >
-        <button onClick={() => setTool('select')} className={tool === 'select' ? 'active' : ''}>Cursor</button>
-        <select onChange={(e) => {
-          setTool(e.target.value as Shape);
-          setShape(e.target.value as Shape);
-        }}>
+      <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 1 }}>
+        <button onClick={() => setTool('select')}>Cursor</button>
+        <select
+          onChange={(e) => {
+            setTool(e.target.value as Shape);
+            setShape(e.target.value as Shape);
+          }}
+        >
           <option value="rect">Rectangle</option>
           <option value="circle">Circle</option>
         </select>
-        <button onClick={() => setTool('line')} className={tool === 'line' ? 'active' : ''}>Line</button>
+        <button onClick={() => setTool('line')}>Line</button>
       </div>
       <Stage
         ref={stageRef}
@@ -105,8 +173,38 @@ const App: React.FC = () => {
         onMouseUp={handleMouseUp}
       >
         <Layer ref={layerRef}>
-          {isDrawing && tool === 'line' && (
-            <Line points={linePoints} stroke="black" strokeWidth={2} />
+          {shapes.map((shape) =>
+            shape.type === 'rect' ? (
+              <Rect
+                key={shape.id}
+                x={shape.x}
+                y={shape.y}
+                width={shape.width}
+                height={shape.height}
+                fill={Konva.Util.getRandomColor()}
+                draggable
+              />
+            ) : (
+              <Circle
+                key={shape.id}
+                x={shape.x + (shape.radius || 0)}
+                y={shape.y + (shape.radius || 0)}
+                radius={shape.radius}
+                fill={Konva.Util.getRandomColor()}
+                draggable
+              />
+            )
+          )}
+          {lines.map((line) => (
+            <Line
+              key={line.id}
+              points={line.points}
+              stroke="black"
+              strokeWidth={2}
+            />
+          ))}
+          {activeLine && (
+            <Line points={activeLine} stroke="black" strokeWidth={2} />
           )}
         </Layer>
       </Stage>
