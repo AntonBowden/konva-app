@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Stage, Layer, Rect, Circle, Line } from 'react-konva';
-import Konva from 'konva';
+import React, { useEffect, useRef, useState } from "react";
+import { Stage, Layer, Rect, Circle, Line } from "react-konva";
+import Konva from "konva";
 
-type Tool = 'select' | 'rect' | 'circle' | 'line';
-type Shape = 'rect' | 'circle';
+type Tool = "select" | "rect" | "circle" | "line";
+type Shape = "rect" | "circle";
 
 interface ShapeData {
   id: string;
@@ -26,12 +26,13 @@ interface LineData {
 const App: React.FC = () => {
   const stageRef = useRef<Konva.Stage>(null);
   const layerRef = useRef<Konva.Layer>(null);
-  const [tool, setTool] = useState<Tool>('select');
-  const [shape, setShape] = useState<Shape>('rect');
+  const [tool, setTool] = useState<Tool>("select");
+  const [shape, setShape] = useState<Shape>("rect");
   const [isDrawing, setIsDrawing] = useState(false);
   const [shapes, setShapes] = useState<ShapeData[]>([]);
   const [lines, setLines] = useState<LineData[]>([]);
   const [activeLine, setActiveLine] = useState<number[] | null>(null);
+  const [hoveredLineEnd, setHoveredLineEnd] = useState<string | null>(null);
 
   useEffect(() => {
     const updateSize = () => {
@@ -41,10 +42,10 @@ const App: React.FC = () => {
       }
     };
 
-    window.addEventListener('resize', updateSize);
+    window.addEventListener("resize", updateSize);
     updateSize();
 
-    return () => window.removeEventListener('resize', updateSize);
+    return () => window.removeEventListener("resize", updateSize);
   }, []);
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -53,13 +54,13 @@ const App: React.FC = () => {
     const pos = stageRef.current.getPointerPosition();
     if (!pos) return;
 
-    if (tool === 'select') {
+    if (tool === "select") {
       return;
     }
 
     setIsDrawing(true);
 
-    if (tool === 'line') {
+    if (tool === "line") {
       setActiveLine([pos.x, pos.y, pos.x, pos.y]);
     } else {
       const newShape: ShapeData = {
@@ -78,7 +79,7 @@ const App: React.FC = () => {
   };
 
   const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (!isDrawing || tool !== 'line' || !activeLine) return;
+    if (!isDrawing || tool !== "line" || !activeLine) return;
     if (!stageRef.current) return;
 
     const pos = stageRef.current.getPointerPosition();
@@ -91,20 +92,20 @@ const App: React.FC = () => {
     if (!isDrawing) return;
     setIsDrawing(false);
 
-    if (tool === 'line' && activeLine) {
+    if (tool === "line" && activeLine) {
       attachLineToShapes();
     }
   };
 
   const isPointInShape = (x: number, y: number, shape: ShapeData): boolean => {
-    if (shape.type === 'rect') {
+    if (shape.type === "rect") {
       return (
         x >= shape.x &&
         x <= shape.x + (shape.width || 0) &&
         y >= shape.y &&
         y <= shape.y + (shape.height || 0)
       );
-    } else if (shape.type === 'circle') {
+    } else if (shape.type === "circle") {
       const dx = x - (shape.x + (shape.radius || 0));
       const dy = y - (shape.y + (shape.radius || 0));
       return dx * dx + dy * dy <= (shape.radius || 0) * (shape.radius || 0);
@@ -139,31 +140,43 @@ const App: React.FC = () => {
     setActiveLine(null);
   };
 
-  const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>, shapeId: string) => {
-    const updatedShapes = shapes.map(shape => 
-      shape.id === shapeId ? { ...shape, x: e.target.x(), y: e.target.y() } : shape
+  const handleDragMove = (
+    e: Konva.KonvaEventObject<DragEvent>,
+    shapeId: string
+  ) => {
+    const updatedShapes = shapes.map((shape) =>
+      shape.id === shapeId
+        ? { ...shape, x: e.target.x(), y: e.target.y() }
+        : shape
     );
     setShapes(updatedShapes);
 
-    const updatedLines = lines.map(line => {
+    const updatedLines = lines.map((line) => {
       let newPoints = [...line.points];
       if (line.startShapeId === shapeId) {
-        newPoints[0] = e.target.x() + (e.target.width() / 2 || e.target.radius());
-        newPoints[1] = e.target.y() + (e.target.height() / 2 || e.target.radius());
+        newPoints[0] =
+          e.target.x() + (e.target.width() / 2 || e.target.radius());
+        newPoints[1] =
+          e.target.y() + (e.target.height() / 2 || e.target.radius());
       }
       if (line.endShapeId === shapeId) {
-        newPoints[2] = e.target.x() + (e.target.width() / 2 || e.target.radius());
-        newPoints[3] = e.target.y() + (e.target.height() / 2 || e.target.radius());
+        newPoints[2] =
+          e.target.x() + (e.target.width() / 2 || e.target.radius());
+        newPoints[3] =
+          e.target.y() + (e.target.height() / 2 || e.target.radius());
       }
       return { ...line, points: newPoints };
     });
     setLines(updatedLines);
   };
 
-  const handleLineClick = (e: Konva.KonvaEventObject<MouseEvent>, lineId: string) => {
-    if (tool !== 'select') return;
+  const handleLineClick = (
+    e: Konva.KonvaEventObject<MouseEvent>,
+    lineId: string
+  ) => {
+    if (tool !== "select") return;
 
-    const updatedLines = lines.map(line => {
+    const updatedLines = lines.map((line) => {
       if (line.id === lineId) {
         const stage = e.target.getStage();
         if (!stage) return line;
@@ -172,13 +185,27 @@ const App: React.FC = () => {
         if (!pos) return line;
 
         let newPoints = [...line.points];
-        const distToStart = Math.hypot(pos.x - newPoints[0], pos.y - newPoints[1]);
-        const distToEnd = Math.hypot(pos.x - newPoints[2], pos.y - newPoints[3]);
+        const distToStart = Math.hypot(
+          pos.x - newPoints[0],
+          pos.y - newPoints[1]
+        );
+        const distToEnd = Math.hypot(
+          pos.x - newPoints[2],
+          pos.y - newPoints[3]
+        );
 
         if (distToStart < 10) {
-          return { ...line, startShapeId: null, points: [pos.x, pos.y, newPoints[2], newPoints[3]] };
+          return {
+            ...line,
+            startShapeId: null,
+            points: [pos.x, pos.y, newPoints[2], newPoints[3]],
+          };
         } else if (distToEnd < 10) {
-          return { ...line, endShapeId: null, points: [newPoints[0], newPoints[1], pos.x, pos.y] };
+          return {
+            ...line,
+            endShapeId: null,
+            points: [newPoints[0], newPoints[1], pos.x, pos.y],
+          };
         }
       }
       return line;
@@ -187,10 +214,42 @@ const App: React.FC = () => {
     setLines(updatedLines);
   };
 
+  const handleLineMouseMove = (
+    e: Konva.KonvaEventObject<MouseEvent>,
+    lineId: string
+  ) => {
+    if (tool !== "select") return;
+
+    const stage = e.target.getStage();
+    if (!stage) return;
+
+    const pos = stage.getPointerPosition();
+    if (!pos) return;
+
+    const line = lines.find((l) => l.id === lineId);
+    if (!line) return;
+
+    const [x1, y1, x2, y2] = line.points;
+    const distToStart = Math.hypot(pos.x - x1, pos.y - y1);
+    const distToEnd = Math.hypot(pos.x - x2, pos.y - y2);
+
+    if (distToStart < 20) {
+      setHoveredLineEnd(`${lineId}-start`);
+    } else if (distToEnd < 20) {
+      setHoveredLineEnd(`${lineId}-end`);
+    } else {
+      setHoveredLineEnd(null);
+    }
+  };
+
+  const handleLineMouseLeave = () => {
+    setHoveredLineEnd(null);
+  };
+
   return (
     <>
-      <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 1 }}>
-        <button onClick={() => setTool('select')}>Cursor</button>
+      <div style={{ position: "absolute", top: 10, left: 10, zIndex: 1 }}>
+        <button onClick={() => setTool("select")}>Cursor</button>
         <select
           onChange={(e) => {
             setTool(e.target.value as Shape);
@@ -200,7 +259,7 @@ const App: React.FC = () => {
           <option value="rect">Rectangle</option>
           <option value="circle">Circle</option>
         </select>
-        <button onClick={() => setTool('line')}>Line</button>
+        <button onClick={() => setTool("line")}>Line</button>
       </div>
       <Stage
         ref={stageRef}
@@ -210,7 +269,7 @@ const App: React.FC = () => {
       >
         <Layer ref={layerRef}>
           {shapes.map((shape) =>
-            shape.type === 'rect' ? (
+            shape.type === "rect" ? (
               <Rect
                 key={shape.id}
                 x={shape.x}
@@ -234,13 +293,32 @@ const App: React.FC = () => {
             )
           )}
           {lines.map((line) => (
-            <Line
-              key={line.id}
-              points={line.points}
-              stroke="black"
-              strokeWidth={2}
-              onClick={(e) => handleLineClick(e, line.id)}
-            />
+            <React.Fragment key={line.id}>
+              <Line
+                points={line.points}
+                stroke="black"
+                strokeWidth={5}
+                onClick={(e) => handleLineClick(e, line.id)}
+                onMouseMove={(e) => handleLineMouseMove(e, line.id)}
+                onMouseLeave={handleLineMouseLeave}
+              />
+              {hoveredLineEnd === `${line.id}-start` && (
+                <Circle
+                  x={line.points[0]}
+                  y={line.points[1]}
+                  radius={8}
+                  fill="red"
+                />
+              )}
+              {hoveredLineEnd === `${line.id}-end` && (
+                <Circle
+                  x={line.points[2]}
+                  y={line.points[3]}
+                  radius={8}
+                  fill="red"
+                />
+              )}
+            </React.Fragment>
           ))}
           {activeLine && (
             <Line points={activeLine} stroke="black" strokeWidth={2} />
