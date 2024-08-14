@@ -1,21 +1,27 @@
 import { useState } from "react";
-import { ShapeData, Shape, KonvaEventObject } from "../types.ts";
-import { getRandomColor } from "../utils.ts";
+import { ShapeData, Shape, KonvaEventObject } from "../types";
+import { getRandomColor, createRegularPolygonPoints } from "../utils";
 
 export const useShapes = () => {
   const [shapes, setShapes] = useState<ShapeData[]>([]);
 
   const addShape = (pos: { x: number; y: number }, shape: Shape) => {
+    const size = 50;
     const newShape: ShapeData = {
       id: Math.random().toString(),
       type: shape,
       x: pos.x,
       y: pos.y,
-      width: shape === "rect" ? 50 : 50,
-      height: shape === "rect" ? 50 : 50,
-      radius: shape === "circle" ? 25 : undefined,
+      width: size,
+      height: size,
       fill: getRandomColor(),
     };
+
+    if (shape === "pentagon") {
+      newShape.points = createRegularPolygonPoints(5, size / 2);
+    } else if (shape === "hexagon") {
+      newShape.points = createRegularPolygonPoints(6, size / 2);
+    }
 
     setShapes([...shapes, newShape]);
   };
@@ -34,6 +40,7 @@ export const useShapes = () => {
   return {
     shapes,
     addShape,
+    updateShapePosition,
     handleDragMove,
   };
 };

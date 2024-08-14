@@ -50,18 +50,10 @@ export const useLines = (shapes: ShapeData[]) => {
     const newLine: LineData = {
       id: Math.random().toString(),
       points: [
-        startShape
-          ? startShape.x + (startShape.width || startShape.radius || 0) / 2
-          : x1,
-        startShape
-          ? startShape.y + (startShape.height || startShape.radius || 0) / 2
-          : y1,
-        endShape
-          ? endShape.x + (endShape.width || endShape.radius || 0) / 2
-          : x2,
-        endShape
-          ? endShape.y + (endShape.height || endShape.radius || 0) / 2
-          : y2,
+        startShape ? startShape.x + (startShape.width || 0) / 2 : x1,
+        startShape ? startShape.y + (startShape.height || 0) / 2 : y1,
+        endShape ? endShape.x + (endShape.width || 0) / 2 : x2,
+        endShape ? endShape.y + (endShape.height || 0) / 2 : y2,
       ],
       startShapeId: startShape?.id || null,
       endShapeId: endShape?.id || null,
@@ -145,12 +137,8 @@ export const useLines = (shapes: ShapeData[]) => {
           const attachedShape = findNearestShape(x, y, shapes);
           if (attachedShape) {
             const newPoints = [...line.points];
-            const centerX =
-              attachedShape.x +
-              (attachedShape.width || attachedShape.radius || 0) / 2;
-            const centerY =
-              attachedShape.y +
-              (attachedShape.height || attachedShape.radius || 0) / 2;
+            const centerX = attachedShape.x + (attachedShape.width || 0) / 2;
+            const centerY = attachedShape.y + (attachedShape.height || 0) / 2;
             if (draggedLineEnd.end === "start") {
               newPoints[0] = centerX;
               newPoints[1] = centerY;

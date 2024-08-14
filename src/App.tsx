@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Stage, Layer, Rect, Circle, Line } from "react-konva";
+import { Stage, Layer, Rect, Line, RegularPolygon } from "react-konva";
 import Konva from "konva";
 import { Tool, Shape } from "./types";
 import { useShapes } from "./hooks/useShapes";
@@ -97,7 +97,8 @@ const App: React.FC = () => {
           }}
         >
           <option value="rect">Rectangle</option>
-          <option value="circle">Circle</option>
+          <option value="pentagon">Pentagon</option>
+          <option value="hexagon">Hexagon</option>
         </select>
         <button onClick={() => setTool("line")}>Line</button>
       </div>
@@ -108,36 +109,45 @@ const App: React.FC = () => {
         onMouseUp={handleMouseUp}
       >
         <Layer ref={layerRef}>
-          {shapes.map((shape) =>
-            shape.type === "rect" ? (
-              <Rect
-                key={shape.id}
-                x={shape.x}
-                y={shape.y}
-                width={shape.width}
-                height={shape.height}
-                fill={shape.fill}
-                draggable
-                onDragMove={(e) => {
-                  handleDragMove(e, shape.id);
-                  updateLineEndpoints(shape.id, e.target.x(), e.target.y());
-                }}
-              />
-            ) : (
-              <Circle
-                key={shape.id}
-                x={shape.x + (shape.radius || 0)}
-                y={shape.y + (shape.radius || 0)}
-                radius={shape.radius}
-                fill={shape.fill}
-                draggable
-                onDragMove={(e) => {
-                  handleDragMove(e, shape.id);
-                  updateLineEndpoints(shape.id, e.target.x(), e.target.y());
-                }}
-              />
-            )
-          )}
+          {shapes.map((shape) => {
+            if (shape.type === "rect") {
+              return (
+                <Rect
+                  key={shape.id}
+                  x={shape.x}
+                  y={shape.y}
+                  width={shape.width}
+                  height={shape.height}
+                  fill={shape.fill}
+                  draggable
+                  onDragMove={(e) => {
+                    handleDragMove(e, shape.id);
+                    updateLineEndpoints(shape.id, e.target.x(), e.target.y());
+                  }}
+                />
+              );
+            } else {
+              return (
+                <RegularPolygon
+                  key={shape.id}
+                  x={shape.x + shape.width / 2}
+                  y={shape.y + shape.height / 2}
+                  sides={shape.type === "pentagon" ? 5 : 6}
+                  radius={shape.width / 2}
+                  fill={shape.fill}
+                  draggable
+                  onDragMove={(e) => {
+                    handleDragMove(e, shape.id);
+                    updateLineEndpoints(
+                      shape.id,
+                      e.target.x() - shape.width / 2,
+                      e.target.y() - shape.height / 2
+                    );
+                  }}
+                />
+              );
+            }
+          })}
           {lines.map((line) => (
             <React.Fragment key={line.id}>
               <Line
@@ -150,17 +160,19 @@ const App: React.FC = () => {
                 onMouseDown={(e) => handleLineMouseDown(e, line.id)}
               />
               {hoveredLineEnd === `${line.id}-start` && (
-                <Circle
+                <RegularPolygon
                   x={line.points[0]}
                   y={line.points[1]}
+                  sides={3}
                   radius={7}
                   fill="red"
                 />
               )}
               {hoveredLineEnd === `${line.id}-end` && (
-                <Circle
+                <RegularPolygon
                   x={line.points[2]}
                   y={line.points[3]}
+                  sides={3}
                   radius={7}
                   fill="red"
                 />

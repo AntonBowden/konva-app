@@ -1,17 +1,17 @@
 import Konva from "konva";
 
-export type Tool = "select" | "rect" | "circle" | "line";
-export type Shape = "rect" | "circle";
+export type Tool = "select" | "rect" | "pentagon" | "hexagon" | "line";
+export type Shape = "rect" | "pentagon" | "hexagon";
 
 export interface ShapeData {
   id: string;
   type: Shape;
   x: number;
   y: number;
-  width?: number;
-  height?: number;
-  radius?: number;
+  width: number;
+  height: number;
   fill: string;
+  points?: number[];
 }
 
 export interface LineData {
