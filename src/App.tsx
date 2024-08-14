@@ -33,6 +33,10 @@ const App: React.FC = () => {
   const [lines, setLines] = useState<LineData[]>([]);
   const [activeLine, setActiveLine] = useState<number[] | null>(null);
   const [hoveredLineEnd, setHoveredLineEnd] = useState<string | null>(null);
+  const [draggedLineEnd, setDraggedLineEnd] = useState<{
+    lineId: string;
+    end: "start" | "end";
+  } | null>(null);
 
   useEffect(() => {
     const updateSize = () => {
@@ -78,23 +82,126 @@ const App: React.FC = () => {
     }
   };
 
+  const handleLineMouseDown = (
+    e: Konva.KonvaEventObject<MouseEvent>,
+    lineId: string
+  ) => {
+    if (tool !== "select") return;
+
+    const stage = e.target.getStage();
+    if (!stage) return;
+
+    const pos = stage.getPointerPosition();
+    if (!pos) return;
+
+    const line = lines.find((l) => l.id === lineId);
+    if (!line) return;
+
+    const [x1, y1, x2, y2] = line.points;
+    const distToStart = Math.hypot(pos.x - x1, pos.y - y1);
+    const distToEnd = Math.hypot(pos.x - x2, pos.y - y2);
+
+    if (distToStart < 10) {
+      setDraggedLineEnd({ lineId, end: "start" });
+    } else if (distToEnd < 10) {
+      setDraggedLineEnd({ lineId, end: "end" });
+    }
+  };
+
   const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (!isDrawing || tool !== "line" || !activeLine) return;
     if (!stageRef.current) return;
 
     const pos = stageRef.current.getPointerPosition();
     if (!pos) return;
 
-    setActiveLine([activeLine[0], activeLine[1], pos.x, pos.y]);
+    if (isDrawing && tool === "line" && activeLine) {
+      setActiveLine([activeLine[0], activeLine[1], pos.x, pos.y]);
+    } else if (draggedLineEnd) {
+      const updatedLines = lines.map((line) => {
+        if (line.id === draggedLineEnd.lineId) {
+          const newPoints = [...line.points];
+          if (draggedLineEnd.end === "start" && !line.startShapeId) {
+            newPoints[0] = pos.x;
+            newPoints[1] = pos.y;
+          } else if (draggedLineEnd.end === "end" && !line.endShapeId) {
+            newPoints[2] = pos.x;
+            newPoints[3] = pos.y;
+          }
+          return { ...line, points: newPoints };
+        }
+        return line;
+      });
+
+      setLines(updatedLines);
+    }
   };
 
   const handleMouseUp = () => {
-    if (!isDrawing) return;
     setIsDrawing(false);
 
     if (tool === "line" && activeLine) {
       attachLineToShapes();
     }
+
+    if (draggedLineEnd) {
+      const updatedLines = lines.map((line) => {
+        if (line.id === draggedLineEnd.lineId) {
+          const [x, y] =
+            draggedLineEnd.end === "start"
+              ? [line.points[0], line.points[1]]
+              : [line.points[2], line.points[3]];
+          const attachedShape = findNearestShape(x, y);
+          if (attachedShape) {
+            const newPoints = [...line.points];
+            const centerX =
+              attachedShape.x +
+              (attachedShape.width || attachedShape.radius || 0) / 2;
+            const centerY =
+              attachedShape.y +
+              (attachedShape.height || attachedShape.radius || 0) / 2;
+            if (draggedLineEnd.end === "start") {
+              newPoints[0] = centerX;
+              newPoints[1] = centerY;
+              return {
+                ...line,
+                points: newPoints,
+                startShapeId: attachedShape.id,
+              };
+            } else {
+              newPoints[2] = centerX;
+              newPoints[3] = centerY;
+              return {
+                ...line,
+                points: newPoints,
+                endShapeId: attachedShape.id,
+              };
+            }
+          }
+        }
+        return line;
+      });
+
+      setLines(updatedLines);
+      setDraggedLineEnd(null);
+    }
+  };
+
+  const findNearestShape = (x: number, y: number): ShapeData | null => {
+    let nearestShape: ShapeData | null = null;
+    let minDistance = Infinity;
+
+    shapes.forEach((shape) => {
+      const centerX = shape.x + (shape.width || shape.radius || 0) / 2;
+      const centerY = shape.y + (shape.height || shape.radius || 0) / 2;
+      const distance = Math.hypot(x - centerX, y - centerY);
+
+      if (distance < minDistance && distance <= 20) {
+        minDistance = distance;
+        nearestShape = shape;
+      }
+    });
+
+    return nearestShape;
   };
 
   const attachLineToShapes = () => {
@@ -308,16 +415,17 @@ const App: React.FC = () => {
               <Line
                 points={line.points}
                 stroke="black"
-                strokeWidth={5}
+                strokeWidth={2}
                 onClick={(e) => handleLineClick(e, line.id)}
                 onMouseMove={(e) => handleLineMouseMove(e, line.id)}
                 onMouseLeave={handleLineMouseLeave}
+                onMouseDown={(e) => handleLineMouseDown(e, line.id)}
               />
               {hoveredLineEnd === `${line.id}-start` && (
                 <Circle
                   x={line.points[0]}
                   y={line.points[1]}
-                  radius={8}
+                  radius={5}
                   fill="red"
                 />
               )}
@@ -325,7 +433,7 @@ const App: React.FC = () => {
                 <Circle
                   x={line.points[2]}
                   y={line.points[3]}
-                  radius={8}
+                  radius={5}
                   fill="red"
                 />
               )}
