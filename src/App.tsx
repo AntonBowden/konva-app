@@ -13,6 +13,7 @@ interface ShapeData {
   width?: number;
   height?: number;
   radius?: number;
+  fill: string;
 }
 
 interface LineData {
@@ -69,6 +70,7 @@ const App: React.FC = () => {
         width: 50,
         height: 50,
         radius: 25,
+        fill: Konva.Util.getRandomColor(),
       };
 
       setShapes([...shapes, newShape]);
@@ -174,9 +176,9 @@ const App: React.FC = () => {
         const distToEnd = Math.hypot(pos.x - newPoints[2], pos.y - newPoints[3]);
 
         if (distToStart < 10) {
-          return { ...line, startShapeId: null };
+          return { ...line, startShapeId: null, points: [pos.x, pos.y, newPoints[2], newPoints[3]] };
         } else if (distToEnd < 10) {
-          return { ...line, endShapeId: null };
+          return { ...line, endShapeId: null, points: [newPoints[0], newPoints[1], pos.x, pos.y] };
         }
       }
       return line;
@@ -215,7 +217,7 @@ const App: React.FC = () => {
                 y={shape.y}
                 width={shape.width}
                 height={shape.height}
-                fill={Konva.Util.getRandomColor()}
+                fill={shape.fill}
                 draggable
                 onDragMove={(e) => handleDragMove(e, shape.id)}
               />
@@ -225,7 +227,7 @@ const App: React.FC = () => {
                 x={shape.x + (shape.radius || 0)}
                 y={shape.y + (shape.radius || 0)}
                 radius={shape.radius}
-                fill={Konva.Util.getRandomColor()}
+                fill={shape.fill}
                 draggable
                 onDragMove={(e) => handleDragMove(e, shape.id)}
               />
