@@ -97,22 +97,6 @@ const App: React.FC = () => {
     }
   };
 
-  const isPointInShape = (x: number, y: number, shape: ShapeData): boolean => {
-    if (shape.type === "rect") {
-      return (
-        x >= shape.x &&
-        x <= shape.x + (shape.width || 0) &&
-        y >= shape.y &&
-        y <= shape.y + (shape.height || 0)
-      );
-    } else if (shape.type === "circle") {
-      const dx = x - (shape.x + (shape.radius || 0));
-      const dy = y - (shape.y + (shape.radius || 0));
-      return dx * dx + dy * dy <= (shape.radius || 0) * (shape.radius || 0);
-    }
-    return false;
-  };
-
   const attachLineToShapes = () => {
     if (!activeLine) return;
 
@@ -121,23 +105,50 @@ const App: React.FC = () => {
     let endShape: ShapeData | null = null;
 
     for (const shape of shapes) {
-      if (isPointInShape(x1, y1, shape)) {
+      const centerX = shape.x + (shape.width || shape.radius || 0) / 2;
+      const centerY = shape.y + (shape.height || shape.radius || 0) / 2;
+
+      if (isPointNearShape(x1, y1, shape)) {
         startShape = shape;
       }
-      if (isPointInShape(x2, y2, shape)) {
+      if (isPointNearShape(x2, y2, shape)) {
         endShape = shape;
       }
     }
 
     const newLine: LineData = {
       id: Math.random().toString(),
-      points: activeLine,
+      points: [
+        startShape
+          ? startShape.x + (startShape.width || startShape.radius || 0) / 2
+          : x1,
+        startShape
+          ? startShape.y + (startShape.height || startShape.radius || 0) / 2
+          : y1,
+        endShape
+          ? endShape.x + (endShape.width || endShape.radius || 0) / 2
+          : x2,
+        endShape
+          ? endShape.y + (endShape.height || endShape.radius || 0) / 2
+          : y2,
+      ],
       startShapeId: startShape?.id || null,
       endShapeId: endShape?.id || null,
     };
 
     setLines([...lines, newLine]);
     setActiveLine(null);
+  };
+
+  const isPointNearShape = (
+    x: number,
+    y: number,
+    shape: ShapeData
+  ): boolean => {
+    const centerX = shape.x + (shape.width || shape.radius || 0) / 2;
+    const centerY = shape.y + (shape.height || shape.radius || 0) / 2;
+    const distance = Math.hypot(x - centerX, y - centerY);
+    return distance <= 20;
   };
 
   const handleDragMove = (
