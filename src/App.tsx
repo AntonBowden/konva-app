@@ -88,19 +88,30 @@ const App: React.FC = () => {
 
   return (
     <>
-      <div style={{ position: "absolute", top: 10, left: 10, zIndex: 1 }}>
-        <button onClick={() => setTool("select")}>Cursor</button>
+      <div className="toolbar">
+        <button
+          onClick={() => setTool("select")}
+          className={tool === "select" ? "active" : ""}
+        >
+          Курсор
+        </button>
         <select
           onChange={(e) => {
             setTool(e.target.value as Shape);
             setShape(e.target.value as Shape);
           }}
         >
-          <option value="rect">Rectangle</option>
-          <option value="pentagon">Pentagon</option>
-          <option value="hexagon">Hexagon</option>
+          <option>Выбрать фигуру</option>
+          <option value="rect">Квадрат</option>
+          <option value="pentagon">Пятиугольник</option>
+          <option value="hexagon">Шестиугольник</option>
         </select>
-        <button onClick={() => setTool("line")}>Line</button>
+        <button
+          onClick={() => setTool("line")}
+          className={tool === "line" ? "active" : ""}
+        >
+          Линия
+        </button>
       </div>
       <Stage
         ref={stageRef}
