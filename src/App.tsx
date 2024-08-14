@@ -90,15 +90,7 @@ const App: React.FC = () => {
     setIsDrawing(false);
 
     if (tool === 'line' && activeLine) {
-      const newLine: LineData = {
-        id: Math.random().toString(),
-        points: activeLine,
-        startShapeId: null,
-        endShapeId: null,
-      };
-
-      setLines([...lines, newLine]);
-      setActiveLine(null);
+      attachLineToShapes();
     }
   };
 
@@ -145,11 +137,53 @@ const App: React.FC = () => {
     setActiveLine(null);
   };
 
-  useEffect(() => {
-    if (!isDrawing && activeLine) {
-      attachLineToShapes();
-    }
-  }, [isDrawing, activeLine]);
+  const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>, shapeId: string) => {
+    const updatedShapes = shapes.map(shape => 
+      shape.id === shapeId ? { ...shape, x: e.target.x(), y: e.target.y() } : shape
+    );
+    setShapes(updatedShapes);
+
+    const updatedLines = lines.map(line => {
+      let newPoints = [...line.points];
+      if (line.startShapeId === shapeId) {
+        newPoints[0] = e.target.x() + (e.target.width() / 2 || e.target.radius());
+        newPoints[1] = e.target.y() + (e.target.height() / 2 || e.target.radius());
+      }
+      if (line.endShapeId === shapeId) {
+        newPoints[2] = e.target.x() + (e.target.width() / 2 || e.target.radius());
+        newPoints[3] = e.target.y() + (e.target.height() / 2 || e.target.radius());
+      }
+      return { ...line, points: newPoints };
+    });
+    setLines(updatedLines);
+  };
+
+  const handleLineClick = (e: Konva.KonvaEventObject<MouseEvent>, lineId: string) => {
+    if (tool !== 'select') return;
+
+    const updatedLines = lines.map(line => {
+      if (line.id === lineId) {
+        const stage = e.target.getStage();
+        if (!stage) return line;
+
+        const pos = stage.getPointerPosition();
+        if (!pos) return line;
+
+        let newPoints = [...line.points];
+        const distToStart = Math.hypot(pos.x - newPoints[0], pos.y - newPoints[1]);
+        const distToEnd = Math.hypot(pos.x - newPoints[2], pos.y - newPoints[3]);
+
+        if (distToStart < 10) {
+          return { ...line, startShapeId: null };
+        } else if (distToEnd < 10) {
+          return { ...line, endShapeId: null };
+        }
+      }
+      return line;
+    });
+
+    setLines(updatedLines);
+  };
 
   return (
     <>
@@ -183,6 +217,7 @@ const App: React.FC = () => {
                 height={shape.height}
                 fill={Konva.Util.getRandomColor()}
                 draggable
+                onDragMove={(e) => handleDragMove(e, shape.id)}
               />
             ) : (
               <Circle
@@ -192,6 +227,7 @@ const App: React.FC = () => {
                 radius={shape.radius}
                 fill={Konva.Util.getRandomColor()}
                 draggable
+                onDragMove={(e) => handleDragMove(e, shape.id)}
               />
             )
           )}
@@ -201,6 +237,7 @@ const App: React.FC = () => {
               points={line.points}
               stroke="black"
               strokeWidth={2}
+              onClick={(e) => handleLineClick(e, line.id)}
             />
           ))}
           {activeLine && (
