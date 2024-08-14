@@ -107,6 +107,8 @@ const App: React.FC = () => {
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        width={window.innerWidth}
+        height={window.innerHeight}
       >
         <Layer ref={layerRef}>
           {shapes.map((shape) => {
@@ -130,19 +132,17 @@ const App: React.FC = () => {
               return (
                 <RegularPolygon
                   key={shape.id}
-                  x={shape.x + shape.width / 2}
-                  y={shape.y + shape.height / 2}
+                  x={shape.centerX}
+                  y={shape.centerY}
                   sides={shape.type === "pentagon" ? 5 : 6}
                   radius={shape.width / 2}
                   fill={shape.fill}
                   draggable
                   onDragMove={(e) => {
+                    const newX = e.target.x() - shape.width / 2;
+                    const newY = e.target.y() - shape.height / 2;
                     handleDragMove(e, shape.id);
-                    updateLineEndpoints(
-                      shape.id,
-                      e.target.x() - shape.width / 2,
-                      e.target.y() - shape.height / 2
-                    );
+                    updateLineEndpoints(shape.id, newX, newY);
                   }}
                 />
               );

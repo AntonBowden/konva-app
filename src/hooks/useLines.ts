@@ -65,18 +65,22 @@ export const useLines = (shapes: ShapeData[]) => {
 
   const updateLineEndpoints = (shapeId: string, x: number, y: number) => {
     const updatedLines = lines.map((line) => {
-      const newPoints = [...line.points];
-      const centerX = x + 25; // Assuming 50x50 shape size
-      const centerY = y + 25;
+      const updatedPoints = [...line.points];
+      const shape = shapes.find((s) => s.id === shapeId);
+      if (!shape) return line;
+
+      const centerX = shape.centerX;
+      const centerY = shape.centerY;
+
       if (line.startShapeId === shapeId) {
-        newPoints[0] = centerX;
-        newPoints[1] = centerY;
+        updatedPoints[0] = centerX;
+        updatedPoints[1] = centerY;
       }
       if (line.endShapeId === shapeId) {
-        newPoints[2] = centerX;
-        newPoints[3] = centerY;
+        updatedPoints[2] = centerX;
+        updatedPoints[3] = centerY;
       }
-      return { ...line, points: newPoints };
+      return { ...line, points: updatedPoints };
     });
     setLines(updatedLines);
   };

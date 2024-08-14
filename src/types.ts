@@ -12,6 +12,8 @@ export interface ShapeData {
   height: number;
   fill: string;
   points?: number[];
+  centerX: number;
+  centerY: number;
 }
 
 export interface LineData {

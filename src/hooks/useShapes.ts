@@ -7,6 +7,8 @@ export const useShapes = () => {
 
   const addShape = (pos: { x: number; y: number }, shape: Shape) => {
     const size = 50;
+    const centerX = pos.x + size / 2;
+    const centerY = pos.y + size / 2;
     const newShape: ShapeData = {
       id: Math.random().toString(),
       type: shape,
@@ -15,6 +17,8 @@ export const useShapes = () => {
       width: size,
       height: size,
       fill: getRandomColor(),
+      centerX,
+      centerY,
     };
 
     if (shape === "pentagon") {
@@ -27,9 +31,14 @@ export const useShapes = () => {
   };
 
   const updateShapePosition = (shapeId: string, x: number, y: number) => {
-    const updatedShapes = shapes.map((shape) =>
-      shape.id === shapeId ? { ...shape, x, y } : shape
-    );
+    const updatedShapes = shapes.map((shape) => {
+      if (shape.id === shapeId) {
+        const centerX = x + shape.width / 2;
+        const centerY = y + shape.height / 2;
+        return { ...shape, x, y, centerX, centerY };
+      }
+      return shape;
+    });
     setShapes(updatedShapes);
   };
 
